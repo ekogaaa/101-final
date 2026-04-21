@@ -1,0 +1,14 @@
+{
+  "name": "watch-party-player",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser watch-party media player with chat and sync playback",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.8.1"
+  }
+}
