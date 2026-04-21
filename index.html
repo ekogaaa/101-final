@@ -3,12 +3,568 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>101 Final</title>
+    <title>Media player & chat</title>
+    <style>
+      :root {
+        --bg: #0f1114;
+        --surface: #1a1d23;
+        --surface-2: #242830;
+        --border: #2e3440;
+        --text: #e8eaed;
+        --muted: #9aa0a6;
+        --accent: #5b8def;
+        --accent-hover: #7aa3f5;
+        --chat-bubble: #2d3340;
+        --radius: 10px;
+        --font: system-ui, "Segoe UI", Roboto, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        line-height: 1.5;
+      }
+
+      .app {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1.25rem;
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: 1fr minmax(280px, 340px);
+        align-items: stretch;
+        min-height: 100vh;
+      }
+
+      @media (max-width: 900px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .player-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .player-shell {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+      }
+
+      .video-wrap {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        background: #000;
+      }
+
+      .video-wrap video {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem 0.75rem;
+        padding: 0.65rem 0.85rem;
+        background: var(--surface-2);
+        border-top: 1px solid var(--border);
+      }
+
+      .controls button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.25rem;
+        height: 2.25rem;
+        padding: 0 0.5rem;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--surface);
+        color: var(--text);
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.9rem;
+      }
+
+      .controls button:hover {
+        border-color: var(--accent);
+        color: var(--accent-hover);
+      }
+
+      .controls button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .progress-row {
+        flex: 1 1 100%;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .time {
+        font-variant-numeric: tabular-nums;
+        font-size: 0.8rem;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      input[type="range"].seek {
+        flex: 1;
+        height: 6px;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
+
+      input[type="range"].vol {
+        width: 88px;
+        accent-color: var(--accent);
+        cursor: pointer;
+      }
+
+      .source-row {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .source-row label {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .source-row input[type="url"],
+      .source-row input[type="file"] {
+        flex: 1 1 180px;
+        min-width: 0;
+        padding: 0.45rem 0.6rem;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        font-size: 0.85rem;
+      }
+
+      .source-row button.apply {
+        padding: 0.45rem 0.85rem;
+        border-radius: 6px;
+        border: none;
+        background: var(--accent);
+        color: #0b0d10;
+        font-weight: 600;
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.85rem;
+      }
+
+      .source-row button.apply:hover {
+        background: var(--accent-hover);
+      }
+
+      .chat-panel {
+        display: flex;
+        flex-direction: column;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        min-height: 420px;
+        max-height: min(85vh, 720px);
+      }
+
+      .chat-header {
+        padding: 0.75rem 1rem;
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--border);
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+
+      .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.75rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+      }
+
+      .msg {
+        max-width: 95%;
+        align-self: flex-start;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px 8px 8px 2px;
+        background: var(--chat-bubble);
+        font-size: 0.9rem;
+        word-break: break-word;
+      }
+
+      .msg .meta {
+        font-size: 0.72rem;
+        color: var(--muted);
+        margin-bottom: 0.2rem;
+      }
+
+      .msg.system {
+        align-self: center;
+        background: transparent;
+        border: 1px dashed var(--border);
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .chat-form {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.75rem;
+        border-top: 1px solid var(--border);
+        background: var(--surface-2);
+      }
+
+      .chat-form input[type="text"] {
+        flex: 1;
+        min-width: 0;
+        padding: 0.55rem 0.75rem;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        font-size: 0.9rem;
+      }
+
+      .chat-form input[type="text"]:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+
+      .chat-form button {
+        padding: 0.55rem 1rem;
+        border-radius: 6px;
+        border: none;
+        background: var(--accent);
+        color: #0b0d10;
+        font-weight: 600;
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.9rem;
+      }
+
+      .chat-form button:hover {
+        background: var(--accent-hover);
+      }
+
+      h1.page-title {
+        margin: 0 0 0.25rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+
+      .subtitle {
+        margin: 0 0 0.5rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+    </style>
   </head>
   <body>
-    <main>
-      <h1>Hello, world!</h1>
-      <p>Your project index page is ready.</p>
-    </main>
+    <div class="app">
+      <div class="player-panel">
+        <header>
+          <h1 class="page-title">Media player</h1>
+          <p class="subtitle">Play video or audio; chat updates as you watch.</p>
+        </header>
+
+        <div class="player-shell">
+          <div class="video-wrap">
+            <video
+              id="media"
+              playsinline
+              preload="metadata"
+              poster=""
+            >
+              <source
+                src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                type="video/mp4"
+              />
+              Your browser does not support HTML5 video.
+            </video>
+          </div>
+          <div class="controls" role="toolbar" aria-label="Playback controls">
+            <button type="button" id="btnPlay" aria-label="Play">▶</button>
+            <div class="progress-row">
+              <span class="time" id="timeCurrent">0:00</span>
+              <input
+                type="range"
+                class="seek"
+                id="seek"
+                min="0"
+                max="1000"
+                value="0"
+                step="1"
+                aria-label="Seek"
+              />
+              <span class="time" id="timeDuration">0:00</span>
+            </div>
+            <button type="button" id="btnMute" aria-label="Mute">🔊</button>
+            <input
+              type="range"
+              class="vol"
+              id="volume"
+              min="0"
+              max="1"
+              value="1"
+              step="0.05"
+              aria-label="Volume"
+            />
+            <button type="button" id="btnFs" aria-label="Fullscreen">⛶</button>
+          </div>
+        </div>
+
+        <div class="source-row">
+          <label for="urlInput">URL</label>
+          <input
+            id="urlInput"
+            type="url"
+            placeholder="https://… (video or audio)"
+            autocomplete="off"
+          />
+          <button type="button" class="apply" id="btnLoadUrl">Load URL</button>
+          <label for="fileInput">File</label>
+          <input id="fileInput" type="file" accept="video/*,audio/*" />
+        </div>
+      </div>
+
+      <aside class="chat-panel" aria-label="Chat">
+        <div class="chat-header">Live chat</div>
+        <div class="chat-messages" id="chatMessages" role="log" aria-live="polite"></div>
+        <form class="chat-form" id="chatForm">
+          <input
+            type="text"
+            id="chatInput"
+            maxlength="500"
+            placeholder="Say something…"
+            autocomplete="off"
+            aria-label="Message"
+          />
+          <button type="submit">Send</button>
+        </form>
+      </aside>
+    </div>
+
+    <script>
+      (function () {
+        const media = document.getElementById("media");
+        const btnPlay = document.getElementById("btnPlay");
+        const btnMute = document.getElementById("btnMute");
+        const btnFs = document.getElementById("btnFs");
+        const seek = document.getElementById("seek");
+        const volume = document.getElementById("volume");
+        const timeCurrent = document.getElementById("timeCurrent");
+        const timeDuration = document.getElementById("timeDuration");
+        const urlInput = document.getElementById("urlInput");
+        const btnLoadUrl = document.getElementById("btnLoadUrl");
+        const fileInput = document.getElementById("fileInput");
+        const chatMessages = document.getElementById("chatMessages");
+        const chatForm = document.getElementById("chatForm");
+        const chatInput = document.getElementById("chatInput");
+
+        let objectUrl = null;
+
+        function formatTime(sec) {
+          if (!Number.isFinite(sec) || sec < 0) return "0:00";
+          const m = Math.floor(sec / 60);
+          const s = Math.floor(sec % 60);
+          return m + ":" + String(s).padStart(2, "0");
+        }
+
+        function setPlayIcon(playing) {
+          btnPlay.textContent = playing ? "⏸" : "▶";
+          btnPlay.setAttribute("aria-label", playing ? "Pause" : "Play");
+        }
+
+        function setMuteIcon(muted) {
+          btnMute.textContent = muted ? "🔇" : "🔊";
+          btnMute.setAttribute("aria-label", muted ? "Unmute" : "Mute");
+        }
+
+        function updateDuration() {
+          const d = media.duration;
+          timeDuration.textContent = formatTime(d);
+          seek.disabled = !Number.isFinite(d) || d <= 0;
+        }
+
+        function syncSeekFromVideo() {
+          const d = media.duration;
+          if (!Number.isFinite(d) || d <= 0) {
+            seek.value = 0;
+            return;
+          }
+          if (!seek.dataset.dragging) {
+            seek.value = String((media.currentTime / d) * 1000);
+          }
+          timeCurrent.textContent = formatTime(media.currentTime);
+        }
+
+        media.addEventListener("loadedmetadata", function () {
+          updateDuration();
+          syncSeekFromVideo();
+        });
+
+        media.addEventListener("timeupdate", syncSeekFromVideo);
+        media.addEventListener("play", function () {
+          setPlayIcon(true);
+        });
+        media.addEventListener("pause", function () {
+          setPlayIcon(false);
+        });
+        media.addEventListener("volumechange", function () {
+          volume.value = String(media.volume);
+          setMuteIcon(media.muted);
+        });
+
+        btnPlay.addEventListener("click", function () {
+          if (media.paused) {
+            media.play().catch(function () {});
+          } else {
+            media.pause();
+          }
+        });
+
+        btnMute.addEventListener("click", function () {
+          media.muted = !media.muted;
+        });
+
+        volume.addEventListener("input", function () {
+          media.volume = Number(volume.value);
+          if (media.volume > 0 && media.muted) media.muted = false;
+        });
+
+        seek.addEventListener("pointerdown", function () {
+          seek.dataset.dragging = "1";
+        });
+        seek.addEventListener("pointerup", function () {
+          delete seek.dataset.dragging;
+        });
+        seek.addEventListener("change", function () {
+          const d = media.duration;
+          if (Number.isFinite(d) && d > 0) {
+            media.currentTime = (Number(seek.value) / 1000) * d;
+          }
+        });
+        seek.addEventListener("input", function () {
+          const d = media.duration;
+          if (Number.isFinite(d) && d > 0) {
+            media.currentTime = (Number(seek.value) / 1000) * d;
+            timeCurrent.textContent = formatTime(media.currentTime);
+          }
+        });
+
+        btnFs.addEventListener("click", function () {
+          const wrap = media.closest(".video-wrap");
+          if (!document.fullscreenElement) {
+            (wrap || media).requestFullscreen?.().catch(function () {});
+          } else {
+            document.exitFullscreen?.();
+          }
+        });
+
+        function revokeObject() {
+          if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+            objectUrl = null;
+          }
+        }
+
+        function loadUrl(u) {
+          const trimmed = (u || "").trim();
+          if (!trimmed) return;
+          revokeObject();
+          media.removeAttribute("poster");
+          media.src = trimmed;
+          media.load();
+          addSystemMessage("Loaded media from URL.");
+        }
+
+        btnLoadUrl.addEventListener("click", function () {
+          loadUrl(urlInput.value);
+        });
+
+        fileInput.addEventListener("change", function () {
+          const f = fileInput.files && fileInput.files[0];
+          if (!f) return;
+          revokeObject();
+          objectUrl = URL.createObjectURL(f);
+          media.removeAttribute("poster");
+          media.src = objectUrl;
+          media.load();
+          addSystemMessage("Playing local file: " + f.name);
+          fileInput.value = "";
+        });
+
+        function nowClock() {
+          const t = new Date();
+          return t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        }
+
+        function addMessage(text, opts) {
+          const div = document.createElement("div");
+          div.className = "msg" + (opts && opts.system ? " system" : "");
+          if (opts && opts.system) {
+            div.textContent = text;
+          } else {
+            const meta = document.createElement("div");
+            meta.className = "meta";
+            meta.textContent = "You · " + nowClock();
+            const body = document.createElement("div");
+            body.textContent = text;
+            div.appendChild(meta);
+            div.appendChild(body);
+          }
+          chatMessages.appendChild(div);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addSystemMessage(text) {
+          addMessage(text, { system: true });
+        }
+
+        chatForm.addEventListener("submit", function (e) {
+          e.preventDefault();
+          const text = chatInput.value.trim();
+          if (!text) return;
+          addMessage(text);
+          chatInput.value = "";
+          chatInput.focus();
+        });
+
+        setPlayIcon(!media.paused);
+        setMuteIcon(media.muted);
+        volume.value = String(media.volume);
+        addSystemMessage("Chat is local to this page — messages are not sent anywhere.");
+
+        media.addEventListener("ended", function () {
+          addSystemMessage("Playback finished.");
+        });
+      })();
+    </script>
   </body>
 </html>
