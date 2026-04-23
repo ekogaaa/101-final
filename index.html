@@ -75,6 +75,13 @@
         display: block;
       }
 
+      .video-wrap iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        display: none;
+      }
+
       .controls {
         display: flex;
         flex-wrap: wrap;
@@ -307,6 +314,12 @@
               />
               Your browser does not support HTML5 video.
             </video>
+            <iframe
+              id="youtubeFrame"
+              title="YouTube player"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen
+            ></iframe>
           </div>
           <div class="controls" role="toolbar" aria-label="Playback controls">
             <button type="button" id="btnPlay" aria-label="Play">▶</button>
@@ -383,11 +396,13 @@
         const urlInput = document.getElementById("urlInput");
         const btnLoadUrl = document.getElementById("btnLoadUrl");
         const fileInput = document.getElementById("fileInput");
+        const youtubeFrame = document.getElementById("youtubeFrame");
         const chatMessages = document.getElementById("chatMessages");
         const chatForm = document.getElementById("chatForm");
         const chatInput = document.getElementById("chatInput");
 
         let objectUrl = null;
+        let activeSource = "html5";
 
         function formatTime(sec) {
           if (!Number.isFinite(sec) || sec < 0) return "0:00";
@@ -494,10 +509,77 @@
           }
         }
 
+        function parseYouTubeId(inputUrl) {
+          const pattern =
+            /(?:youtube\.com\/(?:watch\?[^#\n\r]*?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/i;
+
+          try {
+            const raw = String(inputUrl || "").trim();
+            if (!raw) return null;
+            const m = raw.match(pattern);
+            return m ? m[1] : null;
+          } catch (_) {
+            return null;
+          }
+        }
+
+        function setControlsEnabled(enabled) {
+          btnPlay.disabled = !enabled;
+          btnMute.disabled = !enabled;
+          seek.disabled = !enabled;
+          volume.disabled = !enabled;
+        }
+
+        function switchToHtml5Mode() {
+          activeSource = "html5";
+          youtubeFrame.style.display = "none";
+          youtubeFrame.src = "";
+          media.style.display = "block";
+          setControlsEnabled(true);
+          updateDuration();
+          syncSeekFromVideo();
+        }
+
+        function switchToYouTubeMode(embedSrc) {
+          activeSource = "youtube";
+          media.pause();
+          media.removeAttribute("src");
+          media.load();
+          media.style.display = "none";
+          youtubeFrame.src = embedSrc;
+          youtubeFrame.style.display = "block";
+          setControlsEnabled(false);
+          seek.value = "0";
+          timeCurrent.textContent = "0:00";
+          timeDuration.textContent = "--:--";
+          setPlayIcon(false);
+          setMuteIcon(false);
+        }
+
         function loadUrl(u) {
           const trimmed = (u || "").trim();
           if (!trimmed) return;
           revokeObject();
+          const youTubeId = parseYouTubeId(trimmed);
+          if (youTubeId) {
+            const originParam =
+              window.location.origin && window.location.origin !== "null"
+                ? "&origin=" + encodeURIComponent(window.location.origin)
+                : "";
+            const embedSrc =
+              "https://www.youtube.com/embed/" +
+              youTubeId +
+              "?rel=0&playsinline=1" +
+              originParam;
+            switchToYouTubeMode(embedSrc);
+            addSystemMessage("Loaded YouTube video.");
+            return;
+          }
+          if (/youtu\.?be|youtube\.com/i.test(trimmed)) {
+            addSystemMessage("Could not read that YouTube link. Try a full watch/share URL.");
+            return;
+          }
+          switchToHtml5Mode();
           media.removeAttribute("poster");
           media.src = trimmed;
           media.load();
@@ -512,6 +594,7 @@
           const f = fileInput.files && fileInput.files[0];
           if (!f) return;
           revokeObject();
+          switchToHtml5Mode();
           objectUrl = URL.createObjectURL(f);
           media.removeAttribute("poster");
           media.src = objectUrl;
