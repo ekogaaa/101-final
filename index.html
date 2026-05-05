@@ -367,7 +367,49 @@
       </div>
 
       <aside class="chat-panel" aria-label="Chat">
-        <div class="chat-header">Live chat</div>
+        <div class="chat-header">
+          Live chat
+          <span style="float: right; display: inline-flex; gap: 0.5rem; align-items: center">
+            <label for="roomCode" style="font-size: 0.8rem; color: var(--muted)">Room</label>
+            <input
+              id="roomCode"
+              type="text"
+              maxlength="10"
+              placeholder="LOBBY"
+              autocomplete="off"
+              style="
+                width: 7.5rem;
+                padding: 0.25rem 0.4rem;
+                border-radius: 6px;
+                border: 1px solid var(--border);
+                background: var(--surface);
+                color: var(--text);
+                font: inherit;
+                font-size: 0.85rem;
+                text-transform: uppercase;
+              "
+            />
+            <label for="displayName" style="font-size: 0.8rem; color: var(--muted)">Name</label>
+            <input
+              id="displayName"
+              type="text"
+              maxlength="24"
+              placeholder="you"
+              autocomplete="off"
+              style="
+                width: 9.5rem;
+                padding: 0.25rem 0.4rem;
+                border-radius: 6px;
+                border: 1px solid var(--border);
+                background: var(--surface);
+                color: var(--text);
+                font: inherit;
+                font-size: 0.85rem;
+              "
+            />
+            <span id="chatStatus" style="font-size: 0.8rem; color: var(--muted)">offline</span>
+          </span>
+        </div>
         <div class="chat-messages" id="chatMessages" role="log" aria-live="polite"></div>
         <form class="chat-form" id="chatForm">
           <input
@@ -400,9 +442,13 @@
         const chatMessages = document.getElementById("chatMessages");
         const chatForm = document.getElementById("chatForm");
         const chatInput = document.getElementById("chatInput");
+        const displayName = document.getElementById("displayName");
+        const roomCode = document.getElementById("roomCode");
+        const chatStatus = document.getElementById("chatStatus");
 
         let objectUrl = null;
         let activeSource = "html5";
+        let ws = null;
 
         function formatTime(sec) {
           if (!Number.isFinite(sec) || sec < 0) return "0:00";
@@ -616,7 +662,9 @@
           } else {
             const meta = document.createElement("div");
             meta.className = "meta";
-            meta.textContent = "You · " + nowClock();
+            const who = (opts && opts.who) || "You";
+            const when = (opts && opts.when) || nowClock();
+            meta.textContent = who + " · " + when;
             const body = document.createElement("div");
             body.textContent = text;
             div.appendChild(meta);
@@ -630,11 +678,153 @@
           addMessage(text, { system: true });
         }
 
+        function getSavedName() {
+          try {
+            return localStorage.getItem("chatName") || "";
+          } catch (_) {
+            return "";
+          }
+        }
+
+        function saveName(name) {
+          try {
+            localStorage.setItem("chatName", name);
+          } catch (_) {}
+        }
+
+        function getSavedRoom() {
+          try {
+            return localStorage.getItem("chatRoom") || "";
+          } catch (_) {
+            return "";
+          }
+        }
+
+        function saveRoom(room) {
+          try {
+            localStorage.setItem("chatRoom", room);
+          } catch (_) {}
+        }
+
+        function getName() {
+          const raw = (displayName.value || "").trim();
+          return raw ? raw.slice(0, 24) : "Guest";
+        }
+
+        function normalizeRoom(input) {
+          const raw = String(input || "")
+            .trim()
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, "")
+            .slice(0, 10);
+          return raw || "LOBBY";
+        }
+
+        function getRoom() {
+          return normalizeRoom(roomCode.value);
+        }
+
+        function setRoom(room) {
+          const r = normalizeRoom(room);
+          roomCode.value = r;
+          saveRoom(r);
+          try {
+            const url = new URL(window.location.href);
+            url.searchParams.set("room", r);
+            history.replaceState(null, "", url.toString());
+          } catch (_) {}
+        }
+
+        function setStatus(text) {
+          chatStatus.textContent = text;
+          chatStatus.style.color = text === "online" ? "var(--accent-hover)" : "var(--muted)";
+        }
+
+        function wsUrl() {
+          if (!window.location || !window.location.host) return null;
+          const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+          return proto + "//" + window.location.host + "/ws";
+        }
+
+        function connectChat() {
+          const url = wsUrl();
+          if (!url) {
+            setStatus("offline");
+            addSystemMessage("To use multi-person chat, run the server and open this page from http://localhost:3000 (not file://).");
+            return;
+          }
+
+          try {
+            ws = new WebSocket(url);
+          } catch (_) {
+            setStatus("offline");
+            addSystemMessage("Could not connect to chat server.");
+            return;
+          }
+
+          setStatus("connecting…");
+
+          ws.addEventListener("open", function () {
+            setStatus("online");
+            ws.send(
+              JSON.stringify({
+                type: "join",
+                name: getName(),
+                room: getRoom(),
+              })
+            );
+          });
+
+          ws.addEventListener("message", function (evt) {
+            let data = null;
+            try {
+              data = JSON.parse(String(evt.data));
+            } catch (_) {
+              return;
+            }
+            if (!data || typeof data !== "object") return;
+
+            if (data.type === "system" && typeof data.text === "string") {
+              addSystemMessage(data.text);
+              return;
+            }
+
+            if (data.type === "chat" && typeof data.text === "string") {
+              addMessage(data.text, {
+                who: typeof data.name === "string" && data.name.trim() ? data.name : "Someone",
+                when: typeof data.time === "string" && data.time ? data.time : nowClock(),
+              });
+            }
+          });
+
+          ws.addEventListener("close", function () {
+            setStatus("offline");
+            ws = null;
+            addSystemMessage("Disconnected from chat server.");
+          });
+
+          ws.addEventListener("error", function () {
+            setStatus("offline");
+          });
+        }
+
         chatForm.addEventListener("submit", function (e) {
           e.preventDefault();
           const text = chatInput.value.trim();
           if (!text) return;
-          addMessage(text);
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(
+              JSON.stringify({
+                type: "chat",
+                name: getName(),
+                room: getRoom(),
+                text,
+              })
+            );
+          } else {
+            addMessage(text, { who: "You" });
+            addSystemMessage("Not connected — start the server to chat with others.");
+          }
           chatInput.value = "";
           chatInput.focus();
         });
@@ -642,7 +832,31 @@
         setPlayIcon(!media.paused);
         setMuteIcon(media.muted);
         volume.value = String(media.volume);
-        addSystemMessage("Chat is local to this page — messages are not sent anywhere.");
+        displayName.value = getSavedName();
+        roomCode.value = getSavedRoom() || "LOBBY";
+
+        try {
+          const url = new URL(window.location.href);
+          const roomFromUrl = url.searchParams.get("room");
+          if (roomFromUrl) setRoom(roomFromUrl);
+        } catch (_) {}
+
+        displayName.addEventListener("change", function () {
+          saveName(getName());
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "join", name: getName(), room: getRoom() }));
+          }
+        });
+
+        roomCode.addEventListener("change", function () {
+          setRoom(getRoom());
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "join", name: getName(), room: getRoom() }));
+          }
+        });
+
+        addSystemMessage("Starting chat… (requires local server)");
+        connectChat();
 
         media.addEventListener("ended", function () {
           addSystemMessage("Playback finished.");
