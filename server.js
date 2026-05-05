@@ -114,6 +114,17 @@ wss.on("connection", (socket) => {
       socket.room = room;
       broadcastToRoom(room, { type: "control", room, source, videoId, action, time: t, sentAt });
     }
+
+    if (data.type === "drawing") {
+      const room = safeRoom(data.room || socket.room);
+      const name = safeName(data.name || socket.userName);
+      const dataUrl = String(data.dataUrl || "").trim();
+      if (!dataUrl.startsWith("data:image/")) return;
+      // Keep payloads small-ish (base64 expands ~33%).
+      if (dataUrl.length > 350_000) return;
+      socket.room = room;
+      broadcastToRoom(room, { type: "drawing", room, name, dataUrl, time: nowClock() });
+    }
   });
 });
 

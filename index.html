@@ -280,6 +280,114 @@
         background: var(--accent-hover);
       }
 
+      .draw-window {
+        position: fixed;
+        top: 84px;
+        right: 18px;
+        width: min(420px, calc(100vw - 32px));
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: 0 16px 60px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+        z-index: 50;
+        display: none;
+      }
+
+      .draw-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--border);
+        font-weight: 600;
+        cursor: grab;
+        user-select: none;
+      }
+
+      .draw-body {
+        padding: 0.85rem 1rem 1rem;
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .draw-canvas {
+        width: 100%;
+        height: 260px;
+        background: #fff;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        touch-action: none;
+        display: block;
+      }
+
+      .draw-toolbar {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .draw-toolbar .group {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .draw-toolbar label {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .draw-toolbar input[type="color"] {
+        width: 2.25rem;
+        height: 2.25rem;
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: transparent;
+      }
+
+      .draw-toolbar input[type="range"] {
+        width: 9rem;
+        accent-color: var(--accent);
+      }
+
+      .modal-actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+      }
+
+      .modal-actions button {
+        height: 2.25rem;
+        padding: 0 0.85rem;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--surface-2);
+        color: var(--text);
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.9rem;
+      }
+
+      .modal-actions button.primary {
+        border: none;
+        background: var(--accent);
+        color: #0b0d10;
+        font-weight: 700;
+      }
+
+      .msg img.drawing {
+        max-width: 100%;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #fff;
+        display: block;
+      }
+
       h1.page-title {
         margin: 0 0 0.25rem;
         font-size: 1.25rem;
@@ -426,9 +534,41 @@
             autocomplete="off"
             aria-label="Message"
           />
+          <button type="button" id="btnDraw" title="Draw">Draw</button>
           <button type="submit">Send</button>
         </form>
       </aside>
+    </div>
+
+    <div class="draw-window" id="drawModal" role="dialog" aria-label="Drawing pad">
+      <div class="draw-header" id="drawHeader">
+        <span>Drawing pad</span>
+        <button
+          type="button"
+          id="btnCloseDraw"
+          aria-label="Close"
+          style="background: transparent; border: none; color: var(--text); cursor: pointer; font-size: 1.1rem"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="draw-body">
+        <div class="draw-toolbar">
+          <span class="group">
+            <label for="drawColor">Color</label>
+            <input id="drawColor" type="color" value="#111111" />
+          </span>
+          <span class="group">
+            <label for="drawSize">Brush</label>
+            <input id="drawSize" type="range" min="2" max="28" step="1" value="8" />
+          </span>
+        </div>
+        <canvas id="drawCanvas" class="draw-canvas" width="1200" height="720"></canvas>
+        <div class="modal-actions">
+          <button type="button" id="btnClearDraw">Clear</button>
+          <button type="button" id="btnSendDraw" class="primary">Send to chat</button>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -448,6 +588,15 @@
         const chatMessages = document.getElementById("chatMessages");
         const chatForm = document.getElementById("chatForm");
         const chatInput = document.getElementById("chatInput");
+        const btnDraw = document.getElementById("btnDraw");
+        const drawModal = document.getElementById("drawModal");
+        const btnCloseDraw = document.getElementById("btnCloseDraw");
+        const drawHeader = document.getElementById("drawHeader");
+        const drawCanvas = document.getElementById("drawCanvas");
+        const drawColor = document.getElementById("drawColor");
+        const drawSize = document.getElementById("drawSize");
+        const btnClearDraw = document.getElementById("btnClearDraw");
+        const btnSendDraw = document.getElementById("btnSendDraw");
         const displayName = document.getElementById("displayName");
         const roomCode = document.getElementById("roomCode");
         const chatStatus = document.getElementById("chatStatus");
@@ -789,7 +938,11 @@
             const when = (opts && opts.when) || nowClock();
             meta.textContent = who + " · " + when;
             const body = document.createElement("div");
-            body.textContent = text;
+            if (opts && opts.htmlNode) {
+              body.appendChild(opts.htmlNode);
+            } else {
+              body.textContent = text;
+            }
             div.appendChild(meta);
             div.appendChild(body);
           }
@@ -980,6 +1133,18 @@
               }
               apply();
             }
+
+            if (data.type === "drawing" && typeof data.dataUrl === "string") {
+              const img = document.createElement("img");
+              img.className = "drawing";
+              img.alt = "Drawing";
+              img.src = data.dataUrl;
+              addMessage("", {
+                who: typeof data.name === "string" && data.name.trim() ? data.name : "Someone",
+                when: typeof data.time === "string" && data.time ? data.time : nowClock(),
+                htmlNode: img,
+              });
+            }
           });
 
           ws.addEventListener("close", function () {
@@ -1013,6 +1178,159 @@
           chatInput.value = "";
           chatInput.focus();
         });
+
+        function openDraw() {
+          drawModal.style.display = "block";
+        }
+
+        function closeDraw() {
+          drawModal.style.display = "none";
+        }
+
+        function clearCanvas() {
+          const ctx = drawCanvas.getContext("2d");
+          if (!ctx) return;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+        }
+
+        // Basic drawing (mouse/touch/pen)
+        (function setupDrawing() {
+          const ctx = drawCanvas.getContext("2d");
+          if (!ctx) return;
+          clearCanvas();
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.strokeStyle = drawColor.value || "#111111";
+          ctx.lineWidth = Number(drawSize.value) || 8;
+
+          let drawing = false;
+
+          function pos(evt) {
+            const r = drawCanvas.getBoundingClientRect();
+            return {
+              x: ((evt.clientX - r.left) / r.width) * drawCanvas.width,
+              y: ((evt.clientY - r.top) / r.height) * drawCanvas.height,
+            };
+          }
+
+          drawCanvas.addEventListener("pointerdown", function (e) {
+            drawing = true;
+            drawCanvas.setPointerCapture?.(e.pointerId);
+            const p = pos(e);
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+          });
+
+          drawCanvas.addEventListener("pointermove", function (e) {
+            if (!drawing) return;
+            const p = pos(e);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+          });
+
+          function stop(e) {
+            if (!drawing) return;
+            drawing = false;
+            try {
+              drawCanvas.releasePointerCapture?.(e.pointerId);
+            } catch (_) {}
+          }
+
+          drawCanvas.addEventListener("pointerup", stop);
+          drawCanvas.addEventListener("pointercancel", stop);
+
+          drawColor.addEventListener("input", function () {
+            ctx.strokeStyle = drawColor.value || "#111111";
+          });
+          drawSize.addEventListener("input", function () {
+            const n = Number(drawSize.value);
+            ctx.lineWidth = Number.isFinite(n) && n > 0 ? n : 8;
+          });
+        })();
+
+        btnDraw.addEventListener("click", function () {
+          openDraw();
+        });
+        btnCloseDraw.addEventListener("click", closeDraw);
+        btnClearDraw.addEventListener("click", clearCanvas);
+        btnSendDraw.addEventListener("click", function () {
+          if (!(ws && ws.readyState === WebSocket.OPEN)) {
+            addSystemMessage("Not connected — start the server to share drawings.");
+            return;
+          }
+          const dataUrl = drawCanvas.toDataURL("image/png");
+          ws.send(
+            JSON.stringify({
+              type: "drawing",
+              room: getRoom(),
+              name: getName(),
+              dataUrl,
+            })
+          );
+          closeDraw();
+        });
+
+        // Drag to reposition the drawing window
+        (function setupDrawDrag() {
+          let dragging = false;
+          let startX = 0;
+          let startY = 0;
+          let startLeft = 0;
+          let startTop = 0;
+
+          function px(v) {
+            return Math.round(v) + "px";
+          }
+
+          function clamp(n, min, max) {
+            return Math.max(min, Math.min(max, n));
+          }
+
+          function currentLeftTop() {
+            const r = drawModal.getBoundingClientRect();
+            return { left: r.left, top: r.top };
+          }
+
+          drawHeader.addEventListener("pointerdown", function (e) {
+            dragging = true;
+            drawHeader.setPointerCapture?.(e.pointerId);
+            const cur = currentLeftTop();
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = cur.left;
+            startTop = cur.top;
+            drawHeader.style.cursor = "grabbing";
+            // switch from right-anchored to left/top anchored while dragging
+            drawModal.style.right = "auto";
+            drawModal.style.left = px(startLeft);
+            drawModal.style.top = px(startTop);
+          });
+
+          drawHeader.addEventListener("pointermove", function (e) {
+            if (!dragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            const maxLeft = window.innerWidth - drawModal.offsetWidth - 8;
+            const maxTop = window.innerHeight - drawModal.offsetHeight - 8;
+            const nextLeft = clamp(startLeft + dx, 8, Math.max(8, maxLeft));
+            const nextTop = clamp(startTop + dy, 8, Math.max(8, maxTop));
+            drawModal.style.left = px(nextLeft);
+            drawModal.style.top = px(nextTop);
+          });
+
+          function stopDrag(e) {
+            if (!dragging) return;
+            dragging = false;
+            try {
+              drawHeader.releasePointerCapture?.(e.pointerId);
+            } catch (_) {}
+            drawHeader.style.cursor = "grab";
+          }
+
+          drawHeader.addEventListener("pointerup", stopDrag);
+          drawHeader.addEventListener("pointercancel", stopDrag);
+        })();
 
         setPlayIcon(!media.paused);
         setMuteIcon(media.muted);
