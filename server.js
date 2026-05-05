@@ -99,6 +99,21 @@ wss.on("connection", (socket) => {
       socket.room = room;
       broadcastToRoom(room, { type: "media", room, url, time: nowClock() });
     }
+
+    if (data.type === "control") {
+      const room = safeRoom(data.room || socket.room);
+      const action = String(data.action || "").trim();
+      const source = String(data.source || "html5").trim();
+      const videoId = String(data.videoId || "").trim();
+      const t = Number(data.time);
+      const sentAt = Number(data.sentAt);
+      if (action !== "play" && action !== "pause") return;
+      if (source !== "html5" && source !== "youtube") return;
+      if (!Number.isFinite(t) || t < 0) return;
+      if (!Number.isFinite(sentAt) || sentAt <= 0) return;
+      socket.room = room;
+      broadcastToRoom(room, { type: "control", room, source, videoId, action, time: t, sentAt });
+    }
   });
 });
 

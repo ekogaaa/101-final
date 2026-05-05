@@ -75,7 +75,8 @@
         display: block;
       }
 
-      .video-wrap iframe {
+      .video-wrap iframe,
+      .video-wrap #youtubeFrame {
         width: 100%;
         height: 100%;
         border: 0;
@@ -314,12 +315,11 @@
               />
               Your browser does not support HTML5 video.
             </video>
-            <iframe
+            <div
               id="youtubeFrame"
               title="YouTube player"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen
-            ></iframe>
+              style="display: none; width: 100%; height: 100%"
+            ></div>
           </div>
           <div class="controls" role="toolbar" aria-label="Playback controls">
             <button type="button" id="btnPlay" aria-label="Play">▶</button>
@@ -455,6 +455,33 @@
         let objectUrl = null;
         let activeSource = "html5";
         let ws = null;
+        let applyingRemoteControl = false;
+        let pendingRemoteControl = null;
+        let ytPlayer = null;
+        let ytReady = null;
+        let ytVideoId = null;
+
+        function ensureYouTubeApi() {
+          if (ytReady) return ytReady;
+          ytReady = new Promise(function (resolve) {
+            if (window.YT && window.YT.Player) {
+              resolve(window.YT);
+              return;
+            }
+            const prev = window.onYouTubeIframeAPIReady;
+            window.onYouTubeIframeAPIReady = function () {
+              try {
+                if (typeof prev === "function") prev();
+              } catch (_) {}
+              resolve(window.YT);
+            };
+            const s = document.createElement("script");
+            s.src = "https://www.youtube.com/iframe_api";
+            s.async = true;
+            document.head.appendChild(s);
+          });
+          return ytReady;
+        }
 
         function formatTime(sec) {
           if (!Number.isFinite(sec) || sec < 0) return "0:00";
@@ -494,6 +521,11 @@
         media.addEventListener("loadedmetadata", function () {
           updateDuration();
           syncSeekFromVideo();
+          if (pendingRemoteControl) {
+            const fn = pendingRemoteControl;
+            pendingRemoteControl = null;
+            fn();
+          }
         });
 
         media.addEventListener("timeupdate", syncSeekFromVideo);
@@ -509,10 +541,53 @@
         });
 
         btnPlay.addEventListener("click", function () {
+          if (activeSource === "youtube") {
+            if (!ytPlayer || typeof ytPlayer.getPlayerState !== "function") return;
+            const state = ytPlayer.getPlayerState();
+            const isPlaying = state === 1;
+            const action = isPlaying ? "pause" : "play";
+            const t =
+              typeof ytPlayer.getCurrentTime === "function" ? Number(ytPlayer.getCurrentTime()) : 0;
+            if (action === "play") ytPlayer.playVideo?.();
+            else ytPlayer.pauseVideo?.();
+
+            if (applyingRemoteControl) return;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(
+                JSON.stringify({
+                  type: "control",
+                  room: getRoom(),
+                  source: "youtube",
+                  videoId: ytVideoId,
+                  action,
+                  time: Number.isFinite(t) ? t : 0,
+                  sentAt: Date.now(),
+                })
+              );
+            }
+            return;
+          }
+
           if (media.paused) {
             media.play().catch(function () {});
           } else {
             media.pause();
+          }
+
+          if (activeSource !== "html5") return;
+          if (applyingRemoteControl) return;
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            const action = media.paused ? "play" : "pause";
+            ws.send(
+              JSON.stringify({
+                type: "control",
+                room: getRoom(),
+                source: "html5",
+                action,
+                time: Number.isFinite(media.currentTime) ? media.currentTime : 0,
+                sentAt: Date.now(),
+              })
+            );
           }
         });
 
@@ -585,27 +660,62 @@
         function switchToHtml5Mode() {
           activeSource = "html5";
           youtubeFrame.style.display = "none";
-          youtubeFrame.src = "";
+          ytVideoId = null;
           media.style.display = "block";
           setControlsEnabled(true);
           updateDuration();
           syncSeekFromVideo();
         }
 
-        function switchToYouTubeMode(embedSrc) {
+        function switchToYouTubeMode(videoId) {
           activeSource = "youtube";
+          ytVideoId = videoId;
           media.pause();
           media.removeAttribute("src");
           media.load();
           media.style.display = "none";
-          youtubeFrame.src = embedSrc;
           youtubeFrame.style.display = "block";
-          setControlsEnabled(false);
+          // With the YouTube API we can support play/pause, but not the HTML5 volume/seek UI.
+          btnPlay.disabled = false;
+          btnFs.disabled = false;
+          btnMute.disabled = true;
+          seek.disabled = true;
+          volume.disabled = true;
           seek.value = "0";
           timeCurrent.textContent = "0:00";
           timeDuration.textContent = "--:--";
           setPlayIcon(false);
           setMuteIcon(false);
+
+          ensureYouTubeApi()
+            .then(function (YT) {
+              if (!YT || !YT.Player) return;
+
+              if (!ytPlayer) {
+                ytPlayer = new YT.Player("youtubeFrame", {
+                  height: "100%",
+                  width: "100%",
+                  videoId: videoId,
+                  playerVars: {
+                    playsinline: 1,
+                    rel: 0,
+                  },
+                  events: {
+                    onReady: function () {
+                      // nothing
+                    },
+                    onStateChange: function (e) {
+                      // 1 = playing, 2 = paused
+                      if (e && e.data === 1) setPlayIcon(true);
+                      if (e && e.data === 2) setPlayIcon(false);
+                    },
+                  },
+                });
+              } else {
+                ytPlayer.loadVideoById(videoId);
+              }
+            })
+            .catch(function () {});
         }
 
         function sendMediaUrlToRoom(url) {
@@ -628,16 +738,7 @@
           revokeObject();
           const youTubeId = parseYouTubeId(trimmed);
           if (youTubeId) {
-            const originParam =
-              window.location.origin && window.location.origin !== "null"
-                ? "&origin=" + encodeURIComponent(window.location.origin)
-                : "";
-            const embedSrc =
-              "https://www.youtube.com/embed/" +
-              youTubeId +
-              "?rel=0&playsinline=1" +
-              originParam;
-            switchToYouTubeMode(embedSrc);
+            switchToYouTubeMode(youTubeId);
             addSystemMessage("Loaded YouTube video.");
             return;
           }
@@ -818,11 +919,67 @@
               });
             }
 
-          if (data.type === "media" && typeof data.url === "string") {
-            loadUrl(data.url);
-            urlInput.value = data.url;
-            addSystemMessage("Synced media from room.");
-          }
+            if (data.type === "media" && typeof data.url === "string") {
+              loadUrl(data.url);
+              urlInput.value = data.url;
+              addSystemMessage("Synced media from room.");
+            }
+
+            if (data.type === "control") {
+              const source = String(data.source || "html5");
+              const action = String(data.action || "");
+              const t = Number(data.time);
+              const sentAt = Number(data.sentAt);
+              if ((action !== "play" && action !== "pause") || !Number.isFinite(t) || t < 0) return;
+              if (!Number.isFinite(sentAt) || sentAt <= 0) return;
+
+              const lagSec = Math.max(0, (Date.now() - sentAt) / 1000);
+              const targetTime = action === "play" ? t + lagSec : t;
+
+              if (source === "youtube") {
+                if (activeSource !== "youtube") return;
+                if (!ytPlayer) return;
+                const applyYt = function () {
+                  applyingRemoteControl = true;
+                  try {
+                    ytPlayer.seekTo?.(targetTime, true);
+                    if (action === "play") ytPlayer.playVideo?.();
+                    else ytPlayer.pauseVideo?.();
+                  } finally {
+                    setTimeout(function () {
+                      applyingRemoteControl = false;
+                    }, 250);
+                  }
+                };
+                applyYt();
+                return;
+              }
+
+              if (activeSource !== "html5") return;
+              if (!media || !media.src) return;
+
+              const apply = function () {
+                applyingRemoteControl = true;
+                try {
+                  media.currentTime = targetTime;
+                  if (action === "play") {
+                    media.play().catch(function () {});
+                  } else {
+                    media.pause();
+                  }
+                } finally {
+                  setTimeout(function () {
+                    applyingRemoteControl = false;
+                  }, 250);
+                }
+              };
+
+              if (!Number.isFinite(media.duration) || media.duration <= 0) {
+                pendingRemoteControl = apply;
+                return;
+              }
+              apply();
+            }
           });
 
           ws.addEventListener("close", function () {
