@@ -17,6 +17,22 @@
         --chat-bubble: #2d3340;
         --radius: 10px;
         --font: system-ui, "Segoe UI", Roboto, sans-serif;
+        --btn-h: 2.05rem;
+        --btn-radius: 999px;
+        --shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+      }
+
+      body[data-theme="light"] {
+        --bg: #f6f7fb;
+        --surface: #ffffff;
+        --surface-2: #f1f3f8;
+        --border: #d8ddea;
+        --text: #111318;
+        --muted: #5a6270;
+        --accent: #4d7cff;
+        --accent-hover: #2f64ff;
+        --chat-bubble: #eef1f8;
+        --shadow: 0 10px 30px rgba(15, 17, 20, 0.08);
       }
 
       * {
@@ -26,10 +42,73 @@
       body {
         margin: 0;
         min-height: 100vh;
-        background: var(--bg);
+        background: radial-gradient(900px 520px at 20% -10%, rgba(91, 141, 239, 0.35), transparent 60%),
+          radial-gradient(900px 520px at 85% 0%, rgba(122, 163, 245, 0.18), transparent 60%),
+          radial-gradient(900px 520px at 50% 110%, rgba(45, 51, 64, 0.55), transparent 60%),
+          var(--bg);
         color: var(--text);
         font-family: var(--font);
         line-height: 1.5;
+        transition: background 240ms ease, color 240ms ease;
+      }
+
+      body[data-theme="light"] {
+        background: radial-gradient(900px 520px at 20% -10%, rgba(77, 124, 255, 0.24), transparent 60%),
+          radial-gradient(900px 520px at 85% 0%, rgba(47, 100, 255, 0.12), transparent 60%),
+          radial-gradient(900px 520px at 50% 110%, rgba(240, 243, 248, 0.8), transparent 60%),
+          var(--bg);
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(10px);
+        background: rgba(15, 17, 20, 0.72);
+        border-bottom: 1px solid rgba(46, 52, 64, 0.7);
+      }
+
+      body[data-theme="light"] .topbar {
+        background: rgba(246, 247, 251, 0.75);
+        border-bottom: 1px solid rgba(216, 221, 234, 0.85);
+      }
+
+      .topbar-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0.85rem 1.25rem;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .topbar-right {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .brand {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+      }
+
+      .brand-title {
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+
+      .brand-subtitle {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .topbar-hint {
+        font-size: 0.85rem;
+        color: var(--muted);
+        white-space: nowrap;
       }
 
       .app {
@@ -60,7 +139,7 @@
         border: 1px solid var(--border);
         border-radius: var(--radius);
         overflow: hidden;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+        box-shadow: var(--shadow);
       }
 
       .video-wrap {
@@ -93,30 +172,77 @@
         border-top: 1px solid var(--border);
       }
 
-      .controls button {
+      button {
+        font: inherit;
+      }
+
+      .btn {
+        height: var(--btn-h);
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 2.25rem;
-        height: 2.25rem;
-        padding: 0 0.5rem;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        background: var(--surface);
+        gap: 0.4rem;
+        padding: 0 0.85rem;
+        border-radius: var(--btn-radius);
+        border: 1px solid rgba(46, 52, 64, 0.9);
+        background: rgba(26, 29, 35, 0.8);
         color: var(--text);
         cursor: pointer;
-        font: inherit;
-        font-size: 0.9rem;
+        font-size: 0.88rem;
+        line-height: 1;
+        transition: background 140ms ease, border-color 140ms ease, color 140ms ease,
+          transform 140ms ease;
+      }
+
+      .btn:hover {
+        border-color: rgba(91, 141, 239, 0.65);
+        background: rgba(36, 40, 48, 0.92);
+      }
+
+      .btn:active {
+        transform: translateY(1px);
+      }
+
+      .btn:focus-visible {
+        outline: 2px solid rgba(91, 141, 239, 0.9);
+        outline-offset: 2px;
+      }
+
+      .btn.primary {
+        border: 1px solid rgba(91, 141, 239, 0.7);
+        background: linear-gradient(180deg, rgba(91, 141, 239, 1), rgba(78, 125, 220, 1));
+        color: #0b0d10;
+        font-weight: 700;
+      }
+
+      .btn.primary:hover {
+        background: linear-gradient(180deg, rgba(122, 163, 245, 1), rgba(91, 141, 239, 1));
+      }
+
+      .btn.icon {
+        width: var(--btn-h);
+        min-width: var(--btn-h);
+        padding: 0;
+        border-radius: 999px;
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .controls button {
+        /* button visuals come from .btn */
+        min-width: unset;
       }
 
       .controls button:hover {
-        border-color: var(--accent);
-        color: var(--accent-hover);
+        color: var(--text);
       }
 
       .controls button:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 2px;
+        outline: none;
       }
 
       .progress-row {
@@ -171,20 +297,8 @@
         font-size: 0.85rem;
       }
 
-      .source-row button.apply {
-        padding: 0.45rem 0.85rem;
-        border-radius: 6px;
-        border: none;
-        background: var(--accent);
-        color: #0b0d10;
-        font-weight: 600;
-        cursor: pointer;
-        font: inherit;
-        font-size: 0.85rem;
-      }
-
       .source-row button.apply:hover {
-        background: var(--accent-hover);
+        background: rgba(36, 40, 48, 0.92);
       }
 
       .chat-panel {
@@ -196,6 +310,22 @@
         overflow: hidden;
         min-height: 420px;
         max-height: min(85vh, 720px);
+      }
+
+      /* Smooth theme transitions */
+      .player-shell,
+      .chat-panel,
+      .draw-window,
+      .controls,
+      .chat-header,
+      .chat-form,
+      .source-row input[type="url"],
+      .source-row input[type="file"],
+      .chat-form input[type="text"],
+      .btn,
+      .msg {
+        transition: background-color 240ms ease, border-color 240ms ease, color 240ms ease,
+          box-shadow 240ms ease;
       }
 
       .chat-header {
@@ -264,20 +394,8 @@
         border-color: var(--accent);
       }
 
-      .chat-form button {
-        padding: 0.55rem 1rem;
-        border-radius: 6px;
-        border: none;
-        background: var(--accent);
-        color: #0b0d10;
-        font-weight: 600;
-        cursor: pointer;
-        font: inherit;
-        font-size: 0.9rem;
-      }
-
       .chat-form button:hover {
-        background: var(--accent-hover);
+        background: rgba(36, 40, 48, 0.92);
       }
 
       .draw-window {
@@ -361,31 +479,75 @@
         justify-content: flex-end;
       }
 
-      .modal-actions button {
-        height: 2.25rem;
-        padding: 0 0.85rem;
-        border-radius: 6px;
-        border: 1px solid var(--border);
-        background: var(--surface-2);
-        color: var(--text);
-        cursor: pointer;
-        font: inherit;
-        font-size: 0.9rem;
-      }
-
-      .modal-actions button.primary {
-        border: none;
-        background: var(--accent);
-        color: #0b0d10;
-        font-weight: 700;
-      }
-
       .msg img.drawing {
         max-width: 100%;
         border-radius: 8px;
         border: 1px solid var(--border);
         background: #fff;
         display: block;
+      }
+
+      .ttt-window {
+        position: fixed;
+        bottom: 18px;
+        left: 18px;
+        width: 280px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        z-index: 45;
+        display: none;
+      }
+
+      .ttt-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.65rem 0.85rem;
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--border);
+        font-weight: 650;
+        cursor: grab;
+        user-select: none;
+      }
+
+      .ttt-body {
+        padding: 0.85rem;
+        display: grid;
+        gap: 0.6rem;
+      }
+
+      .ttt-meta {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .ttt-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.45rem;
+      }
+
+      .ttt-cell {
+        height: 3.25rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: rgba(36, 40, 48, 0.35);
+        color: var(--text);
+        font-weight: 800;
+        font-size: 1.2rem;
+        cursor: pointer;
+      }
+
+      body[data-theme="light"] .ttt-cell {
+        background: rgba(241, 243, 248, 0.9);
+      }
+
+      .ttt-cell:disabled {
+        opacity: 0.75;
+        cursor: not-allowed;
       }
 
       h1.page-title {
@@ -402,6 +564,25 @@
     </style>
   </head>
   <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-title">Watch party</div>
+          <div class="brand-subtitle">Synced video + room chat + drawings</div>
+        </div>
+        <div class="topbar-right">
+          <div class="topbar-hint">
+            Tip: share a room link like
+            <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+              >?room=ABC123</span
+            >
+          </div>
+          <button type="button" id="themeToggle" class="btn icon" aria-label="Toggle theme">
+            ☾
+          </button>
+        </div>
+      </div>
+    </header>
     <div class="app">
       <div class="player-panel">
         <header>
@@ -430,7 +611,7 @@
             ></div>
           </div>
           <div class="controls" role="toolbar" aria-label="Playback controls">
-            <button type="button" id="btnPlay" aria-label="Play">▶</button>
+            <button type="button" id="btnPlay" class="btn icon" aria-label="Play">▶</button>
             <div class="progress-row">
               <span class="time" id="timeCurrent">0:00</span>
               <input
@@ -445,7 +626,7 @@
               />
               <span class="time" id="timeDuration">0:00</span>
             </div>
-            <button type="button" id="btnMute" aria-label="Mute">🔊</button>
+            <button type="button" id="btnMute" class="btn icon" aria-label="Mute">🔊</button>
             <input
               type="range"
               class="vol"
@@ -456,7 +637,7 @@
               step="0.05"
               aria-label="Volume"
             />
-            <button type="button" id="btnFs" aria-label="Fullscreen">⛶</button>
+            <button type="button" id="btnFs" class="btn icon" aria-label="Fullscreen">⛶</button>
           </div>
         </div>
 
@@ -468,7 +649,7 @@
             placeholder="https://… (video or audio)"
             autocomplete="off"
           />
-          <button type="button" class="apply" id="btnLoadUrl">Load URL</button>
+          <button type="button" class="btn primary apply" id="btnLoadUrl">Load URL</button>
           <label for="fileInput">File</label>
           <input id="fileInput" type="file" accept="video/*,audio/*" />
         </div>
@@ -534,10 +715,26 @@
             autocomplete="off"
             aria-label="Message"
           />
-          <button type="button" id="btnDraw" title="Draw">Draw</button>
-          <button type="submit">Send</button>
+          <button type="button" id="btnDraw" class="btn" title="Draw">Draw</button>
+          <button type="submit" class="btn primary">Send</button>
         </form>
+        <div style="padding: 0.65rem 0.75rem; border-top: 1px solid var(--border); background: var(--surface)">
+          <button type="button" id="btnTttInvite" class="btn" style="width: 100%">
+            Tic‑Tac‑Toe
+          </button>
+        </div>
       </aside>
+    </div>
+
+    <div class="ttt-window" id="tttWindow" role="dialog" aria-label="Tic Tac Toe">
+      <div class="ttt-header" id="tttHeader">
+        <span>Tic‑Tac‑Toe</span>
+        <button type="button" id="btnCloseTtt" class="btn icon" aria-label="Close">✕</button>
+      </div>
+      <div class="ttt-body">
+        <div class="ttt-meta" id="tttStatus">Not in a game.</div>
+        <div class="ttt-grid" id="tttGrid" aria-label="Board"></div>
+      </div>
     </div>
 
     <div class="draw-window" id="drawModal" role="dialog" aria-label="Drawing pad">
@@ -565,14 +762,15 @@
         </div>
         <canvas id="drawCanvas" class="draw-canvas" width="1200" height="720"></canvas>
         <div class="modal-actions">
-          <button type="button" id="btnClearDraw">Clear</button>
-          <button type="button" id="btnSendDraw" class="primary">Send to chat</button>
+          <button type="button" id="btnClearDraw" class="btn">Clear</button>
+          <button type="button" id="btnSendDraw" class="btn primary">Send to chat</button>
         </div>
       </div>
     </div>
 
     <script>
       (function () {
+        const themeToggle = document.getElementById("themeToggle");
         const media = document.getElementById("media");
         const btnPlay = document.getElementById("btnPlay");
         const btnMute = document.getElementById("btnMute");
@@ -589,6 +787,12 @@
         const chatForm = document.getElementById("chatForm");
         const chatInput = document.getElementById("chatInput");
         const btnDraw = document.getElementById("btnDraw");
+        const btnTttInvite = document.getElementById("btnTttInvite");
+        const tttWindow = document.getElementById("tttWindow");
+        const tttHeader = document.getElementById("tttHeader");
+        const btnCloseTtt = document.getElementById("btnCloseTtt");
+        const tttStatus = document.getElementById("tttStatus");
+        const tttGrid = document.getElementById("tttGrid");
         const drawModal = document.getElementById("drawModal");
         const btnCloseDraw = document.getElementById("btnCloseDraw");
         const drawHeader = document.getElementById("drawHeader");
@@ -609,6 +813,42 @@
         let ytPlayer = null;
         let ytReady = null;
         let ytVideoId = null;
+        let ttt = null; // { gameId, you, opponent, board, turn, status, room }
+
+        function getSavedTheme() {
+          try {
+            return localStorage.getItem("theme") || "";
+          } catch (_) {
+            return "";
+          }
+        }
+
+        function saveTheme(theme) {
+          try {
+            localStorage.setItem("theme", theme);
+          } catch (_) {}
+        }
+
+        function prefersLight() {
+          try {
+            return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+          } catch (_) {
+            return false;
+          }
+        }
+
+        function setTheme(theme) {
+          const t = theme === "light" ? "light" : "dark";
+          document.body.dataset.theme = t;
+          if (themeToggle) {
+            themeToggle.textContent = t === "light" ? "☀" : "☾";
+            themeToggle.setAttribute(
+              "aria-label",
+              t === "light" ? "Switch to dark mode" : "Switch to light mode"
+            );
+          }
+          saveTheme(t);
+        }
 
         function ensureYouTubeApi() {
           if (ytReady) return ytReady;
@@ -631,6 +871,17 @@
           });
           return ytReady;
         }
+
+        // Theme init
+        (function initTheme() {
+          const saved = getSavedTheme();
+          if (saved === "light" || saved === "dark") setTheme(saved);
+          else setTheme(prefersLight() ? "light" : "dark");
+          themeToggle?.addEventListener("click", function () {
+            const cur = document.body.dataset.theme === "light" ? "light" : "dark";
+            setTheme(cur === "light" ? "dark" : "light");
+          });
+        })();
 
         function formatTime(sec) {
           if (!Number.isFinite(sec) || sec < 0) return "0:00";
@@ -954,6 +1205,51 @@
           addMessage(text, { system: true });
         }
 
+        function openTtt() {
+          tttWindow.style.display = "block";
+        }
+
+        function closeTtt() {
+          tttWindow.style.display = "none";
+        }
+
+        function renderTtt() {
+          if (!ttt) {
+            tttStatus.textContent = "Not in a game.";
+            tttGrid.innerHTML = "";
+            return;
+          }
+
+          const myTurn = ttt.status === "playing" && ttt.turn === ttt.you;
+          let statusLine = `You: ${ttt.you} · Opponent: ${ttt.opponent}`;
+          if (ttt.status === "playing") statusLine += myTurn ? " · Your turn" : " · Their turn";
+          if (ttt.status === "won") statusLine += ` · Winner: ${ttt.winner}`;
+          if (ttt.status === "draw") statusLine += " · Draw";
+          tttStatus.textContent = statusLine;
+
+          tttGrid.innerHTML = "";
+          for (let i = 0; i < 9; i++) {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "ttt-cell";
+            b.textContent = ttt.board[i] || "";
+            const canPlay = myTurn && !ttt.board[i];
+            b.disabled = !canPlay;
+            b.addEventListener("click", function () {
+              if (!ttt || !(ws && ws.readyState === WebSocket.OPEN)) return;
+              ws.send(
+                JSON.stringify({
+                  type: "ttt_move",
+                  room: getRoom(),
+                  gameId: ttt.gameId,
+                  idx: i,
+                })
+              );
+            });
+            tttGrid.appendChild(b);
+          }
+        }
+
         function getSavedName() {
           try {
             return localStorage.getItem("chatName") || "";
@@ -1145,6 +1441,63 @@
                 htmlNode: img,
               });
             }
+
+            if (data.type === "ttt_invite" && typeof data.gameId === "string") {
+              const joinBtn = document.createElement("button");
+              joinBtn.type = "button";
+              joinBtn.className = "btn primary";
+              joinBtn.textContent = "Join";
+              joinBtn.addEventListener("click", function () {
+                if (!(ws && ws.readyState === WebSocket.OPEN)) return;
+                ws.send(
+                  JSON.stringify({
+                    type: "ttt_join",
+                    room: getRoom(),
+                    gameId: data.gameId,
+                    name: getName(),
+                  })
+                );
+              });
+
+              const wrap = document.createElement("div");
+              wrap.style.display = "flex";
+              wrap.style.alignItems = "center";
+              wrap.style.justifyContent = "space-between";
+              wrap.style.gap = "0.75rem";
+              const txt = document.createElement("div");
+              txt.textContent = `${data.hostName || "Someone"} invited you to Tic‑Tac‑Toe.`;
+              wrap.appendChild(txt);
+              wrap.appendChild(joinBtn);
+
+              addMessage("", {
+                who: "System",
+                when: typeof data.time === "string" && data.time ? data.time : nowClock(),
+                htmlNode: wrap,
+              });
+            }
+
+            if (data.type === "ttt_start" && typeof data.gameId === "string") {
+              ttt = {
+                room: getRoom(),
+                gameId: data.gameId,
+                you: data.you,
+                opponent: data.opponent,
+                board: Array.isArray(data.board) ? data.board.slice(0, 9) : Array(9).fill(""),
+                turn: data.turn || "X",
+                status: data.status || "playing",
+                winner: null,
+              };
+              openTtt();
+              renderTtt();
+            }
+
+            if (data.type === "ttt_state" && ttt && data.gameId === ttt.gameId) {
+              ttt.board = Array.isArray(data.board) ? data.board.slice(0, 9) : ttt.board;
+              ttt.turn = data.turn || ttt.turn;
+              ttt.status = data.status || ttt.status;
+              ttt.winner = data.winner || null;
+              renderTtt();
+            }
           });
 
           ws.addEventListener("close", function () {
@@ -1270,6 +1623,84 @@
           );
           closeDraw();
         });
+
+        btnTttInvite.addEventListener("click", function () {
+          if (!(ws && ws.readyState === WebSocket.OPEN)) {
+            addSystemMessage("Not connected — start the server to invite someone.");
+            return;
+          }
+          ws.send(
+            JSON.stringify({
+              type: "ttt_invite",
+              room: getRoom(),
+              name: getName(),
+            })
+          );
+          addSystemMessage("Sent a Tic‑Tac‑Toe invite to the room.");
+        });
+
+        btnCloseTtt.addEventListener("click", closeTtt);
+
+        // Drag TicTacToe window
+        (function setupTttDrag() {
+          let dragging = false;
+          let startX = 0;
+          let startY = 0;
+          let startLeft = 0;
+          let startTop = 0;
+
+          function px(v) {
+            return Math.round(v) + "px";
+          }
+
+          function clamp(n, min, max) {
+            return Math.max(min, Math.min(max, n));
+          }
+
+          function currentLeftTop() {
+            const r = tttWindow.getBoundingClientRect();
+            return { left: r.left, top: r.top };
+          }
+
+          tttHeader.addEventListener("pointerdown", function (e) {
+            dragging = true;
+            tttHeader.setPointerCapture?.(e.pointerId);
+            const cur = currentLeftTop();
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = cur.left;
+            startTop = cur.top;
+            tttHeader.style.cursor = "grabbing";
+            tttWindow.style.bottom = "auto";
+            tttWindow.style.right = "auto";
+            tttWindow.style.left = px(startLeft);
+            tttWindow.style.top = px(startTop);
+          });
+
+          tttHeader.addEventListener("pointermove", function (e) {
+            if (!dragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            const maxLeft = window.innerWidth - tttWindow.offsetWidth - 8;
+            const maxTop = window.innerHeight - tttWindow.offsetHeight - 8;
+            const nextLeft = clamp(startLeft + dx, 8, Math.max(8, maxLeft));
+            const nextTop = clamp(startTop + dy, 8, Math.max(8, maxTop));
+            tttWindow.style.left = px(nextLeft);
+            tttWindow.style.top = px(nextTop);
+          });
+
+          function stopDrag(e) {
+            if (!dragging) return;
+            dragging = false;
+            try {
+              tttHeader.releasePointerCapture?.(e.pointerId);
+            } catch (_) {}
+            tttHeader.style.cursor = "grab";
+          }
+
+          tttHeader.addEventListener("pointerup", stopDrag);
+          tttHeader.addEventListener("pointercancel", stopDrag);
+        })();
 
         // Drag to reposition the drawing window
         (function setupDrawDrag() {

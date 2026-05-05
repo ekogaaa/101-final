@@ -11,6 +11,9 @@ app.use(express.static(path.join(__dirname)));
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
 
+const tttPendingByRoom = new Map(); // room -> { gameId, hostSocket, hostName, createdAt }
+const tttGames = new Map(); // gameId -> { room, xSocket, oSocket, xName, oName, board, turn, status }
+
 function nowClock() {
   const t = new Date();
   return t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -48,6 +51,28 @@ function broadcastToRoom(room, obj) {
     if (client.room !== room) continue;
     client.send(msg);
   }
+}
+
+function newGameId() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase() + Date.now().toString(36).slice(-4).toUpperCase();
+}
+
+function winnerFor(board) {
+  const lines = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
+  for (const [a, b, c] of lines) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
+  }
+  if (board.every((x) => x)) return "draw";
+  return null;
 }
 
 wss.on("connection", (socket) => {
@@ -124,6 +149,133 @@ wss.on("connection", (socket) => {
       if (dataUrl.length > 350_000) return;
       socket.room = room;
       broadcastToRoom(room, { type: "drawing", room, name, dataUrl, time: nowClock() });
+    }
+
+    if (data.type === "ttt_invite") {
+      const room = safeRoom(data.room || socket.room);
+      const name = safeName(data.name || socket.userName);
+      socket.room = room;
+
+      const existing = tttPendingByRoom.get(room);
+      if (existing && Date.now() - existing.createdAt < 10 * 60 * 1000) {
+        send(socket, { type: "system", text: "A Tic‑Tac‑Toe invite is already waiting in this room." });
+        return;
+      }
+
+      const gameId = newGameId();
+      tttPendingByRoom.set(room, { gameId, hostSocket: socket, hostName: name, createdAt: Date.now() });
+      broadcastToRoom(room, {
+        type: "ttt_invite",
+        room,
+        gameId,
+        hostName: name,
+        time: nowClock(),
+      });
+      return;
+    }
+
+    if (data.type === "ttt_join") {
+      const room = safeRoom(data.room || socket.room);
+      const name = safeName(data.name || socket.userName);
+      const gameId = String(data.gameId || "").trim();
+      socket.room = room;
+
+      const pending = tttPendingByRoom.get(room);
+      if (!pending || pending.gameId !== gameId) {
+        send(socket, { type: "system", text: "That Tic‑Tac‑Toe invite is no longer available." });
+        return;
+      }
+      if (pending.hostSocket === socket) {
+        send(socket, { type: "system", text: "You can’t join your own invite." });
+        return;
+      }
+
+      // Start game
+      tttPendingByRoom.delete(room);
+      const xSocket = pending.hostSocket;
+      const oSocket = socket;
+      const board = Array(9).fill("");
+      const game = {
+        room,
+        xSocket,
+        oSocket,
+        xName: pending.hostName,
+        oName: name,
+        board,
+        turn: "X",
+        status: "playing",
+      };
+      tttGames.set(gameId, game);
+
+      send(xSocket, {
+        type: "ttt_start",
+        room,
+        gameId,
+        you: "X",
+        opponent: name,
+        board,
+        turn: "X",
+        status: "playing",
+      });
+      send(oSocket, {
+        type: "ttt_start",
+        room,
+        gameId,
+        you: "O",
+        opponent: pending.hostName,
+        board,
+        turn: "X",
+        status: "playing",
+      });
+      broadcastToRoom(room, {
+        type: "system",
+        text: `Tic‑Tac‑Toe started: ${pending.hostName} vs ${name}.`,
+      });
+      return;
+    }
+
+    if (data.type === "ttt_move") {
+      const room = safeRoom(data.room || socket.room);
+      const gameId = String(data.gameId || "").trim();
+      const idx = Number(data.idx);
+      socket.room = room;
+
+      const game = tttGames.get(gameId);
+      if (!game || game.room !== room) return;
+      if (!Number.isInteger(idx) || idx < 0 || idx > 8) return;
+      if (game.status !== "playing") return;
+
+      const isX = socket === game.xSocket;
+      const isO = socket === game.oSocket;
+      if (!isX && !isO) return;
+      const symbol = isX ? "X" : "O";
+      if (game.turn !== symbol) return;
+      if (game.board[idx]) return;
+
+      game.board[idx] = symbol;
+      const win = winnerFor(game.board);
+      if (win === "X" || win === "O") {
+        game.status = "won";
+        game.winner = win;
+      } else if (win === "draw") {
+        game.status = "draw";
+      } else {
+        game.turn = game.turn === "X" ? "O" : "X";
+      }
+
+      const payload = {
+        type: "ttt_state",
+        room,
+        gameId,
+        board: game.board,
+        turn: game.turn,
+        status: game.status,
+        winner: game.winner || null,
+        time: nowClock(),
+      };
+      send(game.xSocket, payload);
+      send(game.oSocket, payload);
+      return;
     }
   });
 });
