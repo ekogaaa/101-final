@@ -602,7 +602,21 @@
           setMuteIcon(false);
         }
 
-        function loadUrl(u) {
+        function sendMediaUrlToRoom(url) {
+          const trimmed = String(url || "").trim();
+          if (!trimmed) return;
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(
+              JSON.stringify({
+                type: "media",
+                room: getRoom(),
+                url: trimmed,
+              })
+            );
+          }
+        }
+
+        function loadUrl(u, opts) {
           const trimmed = (u || "").trim();
           if (!trimmed) return;
           revokeObject();
@@ -633,7 +647,9 @@
         }
 
         btnLoadUrl.addEventListener("click", function () {
-          loadUrl(urlInput.value);
+          const u = urlInput.value;
+          loadUrl(u);
+          sendMediaUrlToRoom(u);
         });
 
         fileInput.addEventListener("change", function () {
@@ -795,6 +811,12 @@
                 when: typeof data.time === "string" && data.time ? data.time : nowClock(),
               });
             }
+
+          if (data.type === "media" && typeof data.url === "string") {
+            loadUrl(data.url);
+            urlInput.value = data.url;
+            addSystemMessage("Synced media from room.");
+          }
           });
 
           ws.addEventListener("close", function () {

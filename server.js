@@ -91,6 +91,14 @@ wss.on("connection", (socket) => {
       socket.room = room;
       broadcastToRoom(room, { type: "chat", room, name, text, time: nowClock() });
     }
+
+    if (data.type === "media") {
+      const room = safeRoom(data.room || socket.room);
+      const url = String(data.url || "").trim().slice(0, 2000);
+      if (!url) return;
+      socket.room = room;
+      broadcastToRoom(room, { type: "media", room, url, time: nowClock() });
+    }
   });
 });
 
