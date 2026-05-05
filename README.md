@@ -2,6 +2,25 @@
 
 This project is a single-page media player (HTML5 video/audio + basic YouTube embed loading) with a simple **multi-person chat** powered by a local WebSocket server.
 
+## Live deployment (Render)
+
+This repo includes `render.yaml` so Render can deploy it easily as a **live webpage with live WebSockets**.
+
+### Steps
+
+1. Push this project to a GitHub repo.
+2. In Render, create a new **Web Service** from your GitHub repo.
+   - Render should detect `render.yaml` automatically.
+3. Click **Deploy**.
+4. When it finishes, Render will give you a public URL like:
+   - `https://your-app-name.onrender.com`
+
+### Rooms on the live site
+
+- You can share a room link like:
+  - `https://your-app-name.onrender.com/?room=ABC123`
+- Anyone with that link will join the same chat room.
+
 ## What was already made (before today)
 
 - **Media player UI**: play/pause, mute/volume, seek bar, fullscreen
@@ -43,4 +62,8 @@ npm start
 
 - Open `http://localhost:3000` in two different browser windows (or different devices on the same network, using your computer's IP and the same port).
 - Type messages in one window; they should appear in the other.
+
+## Notes
+
+- If you deploy on a free tier, the service may “sleep” when idle. The first load after inactivity can take a bit longer.
 

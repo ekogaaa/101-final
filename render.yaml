@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: media-player-chat
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
+    healthCheckPath: /
+
