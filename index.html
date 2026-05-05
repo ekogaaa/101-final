@@ -1447,6 +1447,8 @@
               joinBtn.type = "button";
               joinBtn.className = "btn primary";
               joinBtn.textContent = "Join";
+              joinBtn.style.whiteSpace = "nowrap";
+              joinBtn.style.flexShrink = "0";
               joinBtn.addEventListener("click", function () {
                 if (!(ws && ws.readyState === WebSocket.OPEN)) return;
                 ws.send(
@@ -1464,8 +1466,11 @@
               wrap.style.alignItems = "center";
               wrap.style.justifyContent = "space-between";
               wrap.style.gap = "0.75rem";
+              wrap.style.flexWrap = "wrap";
               const txt = document.createElement("div");
               txt.textContent = `${data.hostName || "Someone"} invited you to Tic‑Tac‑Toe.`;
+              txt.style.flex = "1 1 auto";
+              txt.style.minWidth = "12rem";
               wrap.appendChild(txt);
               wrap.appendChild(joinBtn);
 
@@ -1639,7 +1644,13 @@
           addSystemMessage("Sent a Tic‑Tac‑Toe invite to the room.");
         });
 
-        btnCloseTtt.addEventListener("click", closeTtt);
+        btnCloseTtt.addEventListener("pointerdown", function (e) {
+          e.stopPropagation();
+        });
+        btnCloseTtt.addEventListener("click", function (e) {
+          e.stopPropagation();
+          closeTtt();
+        });
 
         // Drag TicTacToe window
         (function setupTttDrag() {
@@ -1663,6 +1674,7 @@
           }
 
           tttHeader.addEventListener("pointerdown", function (e) {
+            if (e.target && e.target.closest && e.target.closest("button")) return;
             dragging = true;
             tttHeader.setPointerCapture?.(e.pointerId);
             const cur = currentLeftTop();
