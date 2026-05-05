@@ -369,44 +369,50 @@
       <aside class="chat-panel" aria-label="Chat">
         <div class="chat-header">
           Live chat
-          <span style="float: right; display: inline-flex; gap: 0.5rem; align-items: center">
-            <label for="roomCode" style="font-size: 0.8rem; color: var(--muted)">Room</label>
-            <input
-              id="roomCode"
-              type="text"
-              maxlength="10"
-              placeholder="LOBBY"
-              autocomplete="off"
-              style="
-                width: 9.25rem;
-                padding: 0.25rem 0.4rem;
-                border-radius: 6px;
-                border: 1px solid var(--border);
-                background: var(--surface);
-                color: var(--text);
-                font: inherit;
-                font-size: 0.85rem;
-                text-transform: uppercase;
-              "
-            />
-            <label for="displayName" style="font-size: 0.8rem; color: var(--muted)">Name</label>
-            <input
-              id="displayName"
-              type="text"
-              maxlength="24"
-              placeholder="you"
-              autocomplete="off"
-              style="
-                width: 9.5rem;
-                padding: 0.25rem 0.4rem;
-                border-radius: 6px;
-                border: 1px solid var(--border);
-                background: var(--surface);
-                color: var(--text);
-                font: inherit;
-                font-size: 0.85rem;
-              "
-            />
+          <span style="float: right; display: inline-flex; gap: 0.6rem; align-items: center">
+            <span style="display: inline-flex; flex-direction: column; gap: 0.35rem; align-items: flex-end">
+              <span style="display: inline-flex; flex-direction: column; gap: 0.2rem; align-items: flex-end">
+                <label for="roomCode" style="font-size: 0.8rem; color: var(--muted)">Room</label>
+                <input
+                  id="roomCode"
+                  type="text"
+                  maxlength="10"
+                  placeholder="LOBBY"
+                  autocomplete="off"
+                  style="
+                    width: 10.5rem;
+                    padding: 0.25rem 0.4rem;
+                    border-radius: 6px;
+                    border: 1px solid var(--border);
+                    background: var(--surface);
+                    color: var(--text);
+                    font: inherit;
+                    font-size: 0.85rem;
+                    text-transform: uppercase;
+                  "
+                />
+              </span>
+              <span style="display: inline-flex; flex-direction: column; gap: 0.2rem; align-items: flex-end">
+                <label for="displayName" style="font-size: 0.8rem; color: var(--muted)">Name</label>
+                <input
+                  id="displayName"
+                  type="text"
+                  maxlength="24"
+                  placeholder="you"
+                  autocomplete="off"
+                  style="
+                    width: 10.5rem;
+                    padding: 0.25rem 0.4rem;
+                    border-radius: 6px;
+                    border: 1px solid var(--border);
+                    background: var(--surface);
+                    color: var(--text);
+                    font: inherit;
+                    font-size: 0.85rem;
+                  "
+                />
+              </span>
+            </span>
             <span id="chatStatus" style="font-size: 0.8rem; color: var(--muted)">offline</span>
           </span>
         </div>
