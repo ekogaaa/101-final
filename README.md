@@ -40,6 +40,8 @@ This repo includes `render.yaml` so Render can deploy it easily as a **live webp
   - room code input in the UI
   - room can be shared via a link like `http://localhost:3000/?room=ABC123`
 - **Local dev server** so the chat works from `http://localhost:3000` (not `file://`)
+- **Code organization (no behavior change)**: moved inline CSS/JS out of `index.html` into `style.css` + `app.js`
+- **UI simplification**: removed local file picker since it can’t be shared/synced across screens; URL loading is the supported workflow
 
 ## How to run
 
